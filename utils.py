@@ -4,10 +4,10 @@ Funções auxiliares para processamento de landmarks e suavização.
 import numpy as np
 import cv2
 from collections import deque
-from typing import List, Tuple, Optional
+from typing import Tuple, Optional
 
 # Cores do design system
-COLOR_GREEN = (0, 255, 136)  # #00FF88 - Indicador, rastreamento ativo
+COLOR_GREEN = (0, 255, 136)  # #00FF88 - Palma da mão, rastreamento ativo
 COLOR_BLUE = (0, 136, 255)   # #0088FF - Clique simples
 COLOR_YELLOW = (0, 170, 255) # #FFAA00 - Clique duplo
 COLOR_RED = (68, 68, 255)    # #FF4444 - Erro/pausado
@@ -15,7 +15,8 @@ COLOR_GRAY = (72, 61, 45)    # #2D3748 - Fundo
 COLOR_WHITE = (255, 255, 255)
 
 # Landmarks importantes
-LANDMARK_INDEX = 8   # Ponta do dedo indicador
+LANDMARK_INDEX = 0   # Palma da mão (pulso) - usado para movimento do cursor
+LANDMARK_INDEX_FINGER = 8   # Ponta do dedo indicador - usado para feedback visual
 LANDMARK_THUMB = 4   # Ponta do polegar
 LANDMARK_MIDDLE = 12 # Ponta do dedo médio
 LANDMARK_WRIST = 0   # Pulso
@@ -132,20 +133,35 @@ def draw_gesture_feedback(frame, landmarks, thumb_landmark, middle_landmark,
     
     h, w = frame.shape[:2]
     
+    # IMPORTANTE: Como a imagem foi invertida antes do MediaPipe processar,
+    # os landmarks estão nas coordenadas da imagem invertida.
+    # Mas o frame que recebemos aqui já está na imagem invertida,
+    # então as coordenadas dos landmarks devem corresponder diretamente.
+    # No entanto, se houver problemas de alinhamento, pode ser necessário
+    # inverter as coordenadas X. Vamos usar as coordenadas diretamente primeiro.
+    
     # Clique simples: polegar + médio
     if thumb_landmark and middle_landmark:
         distance_single = calculate_distance(thumb_landmark, middle_landmark)
         threshold_visual = single_click_threshold * 1.5  # Mostra feedback antes do limiar
         
         if distance_single < threshold_visual:
-            x1, y1 = int(thumb_landmark.x * w), int(thumb_landmark.y * h)
-            x2, y2 = int(middle_landmark.x * w), int(middle_landmark.y * h)
+            # Converte coordenadas normalizadas para pixels
+            # IMPORTANTE: A imagem foi invertida antes do MediaPipe processar.
+            # Os landmarks foram calculados na imagem invertida, mas o MediaPipe
+            # desenha os landmarks corretamente nessa imagem invertida.
+            # Para alinhar nossos círculos com os landmarks do MediaPipe,
+            # precisamos inverter as coordenadas X ao desenhar.
+            x1 = int((1.0 - thumb_landmark.x) * w)  # Inverte X para alinhar
+            y1 = int(thumb_landmark.y * h)
+            x2 = int((1.0 - middle_landmark.x) * w)  # Inverte X para alinhar
+            y2 = int(middle_landmark.y * h)
             
-            # Círculos nas pontas
+            # Círculos nas pontas dos dedos (polegar e médio)
             cv2.circle(frame, (x1, y1), 10, COLOR_BLUE, 2)
             cv2.circle(frame, (x2, y2), 10, COLOR_BLUE, 2)
             
-            # Linha conectando
+            # Linha conectando os dedos
             if distance_single < single_click_threshold:
                 cv2.line(frame, (x1, y1), (x2, y2), COLOR_BLUE, 3)
             else:
@@ -157,23 +173,35 @@ def draw_gesture_feedback(frame, landmarks, thumb_landmark, middle_landmark,
         threshold_visual = double_click_threshold * 1.5
         
         if distance_double < threshold_visual:
-            x1, y1 = int(thumb_landmark.x * w), int(thumb_landmark.y * h)
-            x2, y2 = int(index_landmark.x * w), int(index_landmark.y * h)
+            # Converte coordenadas normalizadas para pixels
+            # Inverte X para corresponder à imagem invertida
+            x1 = int((1.0 - thumb_landmark.x) * w)  # Inverte X
+            y1 = int(thumb_landmark.y * h)
+            x2 = int((1.0 - index_landmark.x) * w)  # Inverte X
+            y2 = int(index_landmark.y * h)
             
-            # Círculos nas pontas
+            # Círculos nas pontas dos dedos (polegar e indicador)
             cv2.circle(frame, (x1, y1), 10, COLOR_YELLOW, 2)
             cv2.circle(frame, (x2, y2), 10, COLOR_YELLOW, 2)
             
-            # Linha conectando
+            # Linha conectando os dedos
             if distance_double < double_click_threshold:
                 cv2.line(frame, (x1, y1), (x2, y2), COLOR_YELLOW, 3)
             else:
                 cv2.line(frame, (x1, y1), (x2, y2), COLOR_YELLOW, 1)
     
-    # Destaque especial para o dedo indicador (usado para movimento)
+    # Destaque especial para o dedo indicador (feedback visual)
     if index_landmark:
-        x, y = int(index_landmark.x * w), int(index_landmark.y * h)
-        cv2.circle(frame, (x, y), 12, COLOR_GREEN, 3)
+        x = int((1.0 - index_landmark.x) * w)  # Inverte X
+        y = int(index_landmark.y * h)
+        cv2.circle(frame, (x, y), 12, COLOR_GREEN, 2)
+    
+    # Destaque para a palma da mão (usada para movimento do cursor)
+    if landmarks is not None and len(landmarks.landmark) > 0:
+        palm = landmarks.landmark[0]  # Landmark 0 = pulso/palma
+        x = int((1.0 - palm.x) * w)  # Inverte X
+        y = int(palm.y * h)
+        cv2.circle(frame, (x, y), 15, COLOR_GREEN, 4)  # Círculo maior para a palma
     
     return frame
 

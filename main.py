@@ -227,8 +227,9 @@ class VideoProcessor(VideoProcessorBase):
                 
                 if self.mouse_controller is not None:
                     try:
+                        # Usa landmark 0 (pulso/palma da mão) para controlar o cursor
                         self.mouse_controller.move_cursor(
-                            landmark_index=8,
+                            landmark_index=0,  # 0 = pulso/palma da mão
                             landmarks=landmarks,
                             sensitivity=sensitivity,
                             scale_factor=scale_factor

@@ -4,7 +4,6 @@ Módulo para controle do cursor do mouse e detecção de gestos.
 import pyautogui
 import time
 from collections import deque
-from typing import Optional, Tuple
 import utils
 
 # Limites de segurança do PyAutoGUI
@@ -40,10 +39,10 @@ class MouseController:
     def move_cursor(self, landmark_index, landmarks, sensitivity: float = 1.0, 
                    scale_factor: float = 1.0) -> bool:
         """
-        Move o cursor do mouse baseado na posição do dedo indicador.
+        Move o cursor do mouse baseado na posição da palma da mão.
         
         Args:
-            landmark_index: Índice do landmark do dedo indicador (8)
+            landmark_index: Índice do landmark da palma (0 = pulso/palma)
             landmarks: Objeto HandLandmarks do MediaPipe
             sensitivity: Fator de sensibilidade (0.5 a 3.0)
             scale_factor: Fator de escala da calibração
@@ -54,19 +53,29 @@ class MouseController:
         if landmarks is None or landmark_index >= len(landmarks.landmark):
             return False
         
-        # Obtém coordenadas do dedo indicador (landmark 8)
-        index_landmark = landmarks.landmark[landmark_index]
+        # Obtém coordenadas da palma da mão (landmark 0 = pulso, centro da palma)
+        palm_landmark = landmarks.landmark[landmark_index]
         
         # Coordenadas normalizadas (0-1)
-        # INVERTE X para corrigir a inversão espelhada da câmera
-        x_norm = 1.0 - index_landmark.x  # Inverte horizontalmente
-        y_norm = index_landmark.y
+        # NOTA: A imagem já é invertida antes do processamento do MediaPipe (em main.py),
+        # então os landmarks já estão nas coordenadas da imagem invertida que o usuário vê.
+        # Portanto, NÃO precisamos inverter novamente aqui.
+        x_norm = palm_landmark.x
+        y_norm = palm_landmark.y
+        
+        # Mapeia uma área maior da webcam (80% central) para 100% da tela
+        # Isso permite que o cursor chegue nas bordas da tela mesmo quando a mão
+        # está próxima das bordas da webcam, sem precisar sair da área visível
+        # Usa uma zona central de 80% que mapeia para 100% da tela
+        margin = 0.1  # 10% de margem em cada lado
+        x_norm = (x_norm - margin) / (1.0 - 2 * margin)
+        y_norm = (y_norm - margin) / (1.0 - 2 * margin)
         
         # Aplica fator de escala e sensibilidade
         x_norm = (x_norm - 0.5) * scale_factor * sensitivity + 0.5
         y_norm = (y_norm - 0.5) * scale_factor * sensitivity + 0.5
         
-        # Limita entre 0 e 1
+        # Limita entre 0 e 1 (permite valores ligeiramente fora para chegar nas bordas)
         x_norm = max(0.0, min(1.0, x_norm))
         y_norm = max(0.0, min(1.0, y_norm))
         

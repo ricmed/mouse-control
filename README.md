@@ -8,7 +8,7 @@ O MouseControl permite controlar o cursor do computador e executar cliques atrav
 
 ## ✨ Funcionalidades
 
-- **Rastreamento do Cursor em Tempo Real**: Mapeamento do dedo indicador para movimento do cursor com suavização
+- **Rastreamento do Cursor em Tempo Real**: Mapeamento da palma da mão (pulso) para movimento do cursor com suavização
 - **Vídeo em Tempo Real sem Piscar**: Utiliza streamlit-webrtc para transmissão fluida de vídeo
 - **Clique Simples**: Gesto de polegar + dedo médio com feedback visual
 - **Clique Duplo**: Gesto de polegar + dedo indicador com debounce para evitar duplicação
@@ -67,7 +67,7 @@ streamlit run main.py
    - Clique em **"⚙️ Calibrar"** para calibrar a distância da mão
 
 4. **Gestos:**
-   - **Movimento do Cursor**: Mova o dedo indicador na frente da câmera
+   - **Movimento do Cursor**: Mova a palma da mão na frente da câmera (o cursor segue o pulso/palma)
    - **Clique Simples**: Junte a ponta do polegar com a ponta do dedo médio
    - **Clique Duplo**: Junte a ponta do polegar com a ponta do dedo indicador
 
@@ -77,7 +77,7 @@ streamlit run main.py
 
 ## 🎨 Feedback Visual
 
-- **Verde (#00FF88)**: Dedo indicador (rastreamento ativo) - círculo destacado na ponta do dedo
+- **Verde (#00FF88)**: Palma da mão (rastreamento ativo) - círculo destacado no pulso/palma. O dedo indicador também tem um círculo verde menor para referência visual
 - **Azul (#0088FF)**: Gesto de clique simples detectado (polegar + dedo médio) - círculos e linha conectando
 - **Amarelo (#FFAA00)**: Gesto de clique duplo detectado (polegar + dedo indicador) - círculos e linha conectando
 - **Vermelho (#FF4444)**: Status pausado ou erro
@@ -117,7 +117,7 @@ mouse-control/
 
 - **hand_tracker.py**: Implementa o rastreamento de mão usando MediaPipe Hands. Processa frames e detecta landmarks (21 pontos) da mão.
 
-- **mouse_controller.py**: Controla o movimento do cursor baseado no dedo indicador e detecta gestos de clique (simples e duplo). Implementa suavização com média móvel.
+- **mouse_controller.py**: Controla o movimento do cursor baseado na palma da mão (pulso) e detecta gestos de clique (simples e duplo). Implementa suavização com média móvel.
 
 - **calibration.py**: Calcula fator de escala baseado na distância da mão à câmera usando landmarks de referência (pulso e base do dedo médio).
 
